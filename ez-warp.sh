@@ -15,7 +15,7 @@ architecture() {
     'mipsel') arch='mipsle_softfloat' ;;
     'mips') arch='mips_softfloat' ;;
     's390x') arch='s390x' ;;
-    *) echo "error: The architecture is not supported."; return 1 ;;
+    *) echo "error: The architecture is not supported."; exit 1 ;;
   esac
   echo "$arch"
 }
@@ -50,7 +50,7 @@ fi
 clear
 #downloading assets
 arch=$(architecture)
-wget -O "/usr/bin/wgcf" "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_${arch}"
+wget -O "/usr/bin/wgcf" "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_${arch}" || { echo "Failed to download wgcf. Please check the URL or your internet connection."; exit 1; }
 chmod +x /usr/bin/wgcf
 
 clear
@@ -59,20 +59,20 @@ rm -rf wgcf-account.toml &> /dev/null || true
 rm -rf /etc/wireguard/warp.conf &> /dev/null || true
 
 # main dish
-wgcf register
+wgcf register || { echo "Failed to register wgcf."; exit 1; }
 read -rp "Do you want to use your own key? (Y/n): " response
 if [[ $response =~ ^[Yy]$ ]]; then
     read -rp "ENTER YOUR LICENSE: " LICENSE_KEY
     sed -i "s/license_key = '.*'/license_key = '$LICENSE_KEY'/" wgcf-account.toml
-    wgcf update
+    wgcf update || { echo "Failed to update wgcf with your license key."; exit 1; }
 fi
 
-wgcf generate
+wgcf generate || { echo "Failed to generate wgcf profile."; exit 1; }
 
 sed -i '/\[Peer\]/i Table = off' wgcf-profile.conf
 mv wgcf-profile.conf /etc/wireguard/warp.conf
 
 systemctl disable --now wg-quick@warp &> /dev/null || true
-systemctl enable --now wg-quick@warp
+systemctl enable --now wg-quick@warp || { echo "Failed to enable WireGuard warp."; exit 1; }
 
 echo "Wireguard warp is up and running"
