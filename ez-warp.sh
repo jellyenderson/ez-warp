@@ -51,7 +51,7 @@ fi
 clear
 #downloading assets
 arch=$(architecture)
-wget -O "/usr/bin/wgcf" https://github.com/ViRb3/wgcf/releases/download/v2.2.23/wgcf_2.2.19_linux_$arch
+wget -O "/usr/bin/wgcf" https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_amd64$arch
 chmod +x /usr/bin/wgcf
 
 
