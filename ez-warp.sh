@@ -50,7 +50,9 @@ fi
 clear
 #downloading assets
 arch=$(architecture)
-wget -O "/usr/bin/wgcf" "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_${arch}" || { echo "Failed to download wgcf. Please check the URL or your internet connection."; exit 1; }
+wget -O "/usr/bin/wgcf" "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_${arch}.tar.gz" || { echo "Failed to download wgcf. Please check the URL or your internet connection."; exit 1; }
+
+tar -xzf "/usr/bin/wgcf" -C /usr/bin/ || { echo "Failed to extract wgcf. Please ensure the downloaded file is correct."; exit 1; }
 chmod +x /usr/bin/wgcf
 
 clear
