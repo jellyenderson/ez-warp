@@ -1,66 +1,51 @@
 #!/bin/bash
 set -e
 
-#necessary functions 
-architecture() {
+# Determine system architecture
+determine_architecture() {
   case "$(uname -m)" in
-    'i386' | 'i686') arch='386' ;;
-    'x86_64') arch='amd64' ;;
-    'armv5tel') arch='armv5' ;;
-    'armv6l') arch='armv6' ;;
-    'armv7' | 'armv7l') arch='armv7' ;;
-    'aarch64') arch='arm64' ;;
-    'mips64el') arch='mips64le_softfloat' ;;
-    'mips64') arch='mips64_softfloat' ;;
-    'mipsel') arch='mipsle_softfloat' ;;
-    'mips') arch='mips_softfloat' ;;
-    's390x') arch='s390x' ;;
+    'i386' | 'i686') echo '386' ;;
+    'x86_64') echo 'amd64' ;;
+    'armv5tel') echo 'armv5' ;;
+    'armv6l') echo 'armv6' ;;
+    'armv7' | 'armv7l') echo 'armv7' ;;
+    'aarch64') echo 'arm64' ;;
+    'mips64el') echo 'mips64le_softfloat' ;;
+    'mips64') echo 'mips64_softfloat' ;;
+    'mipsel') echo 'mipsle_softfloat' ;;
+    'mips') echo 'mips_softfloat' ;;
+    's390x') echo 's390x' ;;
     *) echo "error: The architecture is not supported."; exit 1 ;;
   esac
-  echo "$arch"
 }
 
-#check user status
+# Ensure root privileges
 if [ "$(id -u)" -ne 0 ]; then
     echo "This script requires root privileges. Please run it as root."
     exit 1
 fi
 
-#installing necessary packages
+# Install necessary packages
 apt update
-ubuntu_version=$(lsb_release -r | awk '{print $2}')
-if [[ "$ubuntu_version" == "24.04" ]]; then
-  apt install -y wireguard
-elif [[ "$ubuntu_version" == "22.04" || "$ubuntu_version" == "20.04" ]]; then
-  apt install -y wireguard-dkms wireguard-tools resolvconf
-fi
+apt install -y wireguard-dkms wireguard-tools resolvconf
 
-#checking packages
-if ! command -v wg-quick &> /dev/null
-then
-    echo "something went wrong with wireguard package installation"
+# Check if wg-quick and resolvconf are installed
+for cmd in wg-quick resolvconf; do
+  if ! command -v $cmd &> /dev/null; then
+    echo "Error: $cmd is required but not installed."
     exit 1
-fi
-if ! command -v resolvconf &> /dev/null
-then
-    echo "something went wrong with resolvconf package installation"
-    exit 1
-fi
+  fi
+done
 
-clear
-#downloading assets
-arch=$(architecture)
-wget -O "/usr/bin/wgcf" "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_${arch}.tar.gz" || { echo "Failed to download wgcf. Please check the URL or your internet connection."; exit 1; }
-
-tar -xzf "/usr/bin/wgcf" -C /usr/bin/ || { echo "Failed to extract wgcf. Please ensure the downloaded file is correct."; exit 1; }
+# Download and set up wgcf
+arch=$(determine_architecture)
+wget -O "/usr/bin/wgcf" "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_${arch}" || { echo "Failed to download wgcf."; exit 1; }
 chmod +x /usr/bin/wgcf
 
-clear
-# removing files that might cause problems
-rm -rf wgcf-account.toml &> /dev/null || true
-rm -rf /etc/wireguard/warp.conf &> /dev/null || true
+# Remove potential conflicting files
+rm -f wgcf-account.toml /etc/wireguard/warp.conf
 
-# main dish
+# Register and configure wgcf
 wgcf register || { echo "Failed to register wgcf."; exit 1; }
 read -rp "Do you want to use your own key? (Y/n): " response
 if [[ $response =~ ^[Yy]$ ]]; then
@@ -71,10 +56,11 @@ fi
 
 wgcf generate || { echo "Failed to generate wgcf profile."; exit 1; }
 
+# Configure WireGuard
 sed -i '/\[Peer\]/i Table = off' wgcf-profile.conf
 mv wgcf-profile.conf /etc/wireguard/warp.conf
 
-systemctl disable --now wg-quick@warp &> /dev/null || true
+# Enable WireGuard
 systemctl enable --now wg-quick@warp || { echo "Failed to enable WireGuard warp."; exit 1; }
 
 echo "Wireguard warp is up and running"
